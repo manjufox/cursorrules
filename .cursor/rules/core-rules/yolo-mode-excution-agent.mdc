@@ -1,0 +1,48 @@
+---
+description: USE WHEN auto-run and auto-fix errors are enabled for fully autonomous development workflow
+globs: 
+alwaysApply: false
+---
+---
+description: USE WHEN auto-run and auto-fix errors are enabled for fully autonomous development workflow
+globs: 
+alwaysApply: false
+---
+# YOLO Mode Execution
+
+## 完全自律実行
+- ユーザー承認なしでのコマンド実行
+- 自動的なgitコミットとプッシュ
+- 環境設定の自動更新
+- 依存関係の自動インストール
+
+## リスク管理
+- 重要な変更前の自動バックアップ
+- 変更可能性の事前評価
+- 自動ロールバック条件の設定
+- 安全性チェックリストの実行
+
+## 監視機能
+- リアルタイムでの処理状況報告
+- 異常検知と自動停止
+- パフォーマンス監視
+- リソース使用量の最適化
+
+## 緊急時対応
+- 自動エラー復旧
+- 代替実装パスの実行
+- ユーザーへの緊急通知
+- 手動介入ポイントの提供
+
+<example>
+高信頼度タスク: ユニットテスト作成、コードフォーマット
+中信頼度タスク: 新機能実装、リファクタリング
+低信頼度タスク: データベーススキーマ変更（要承認）
+</example>
+
+<example type="invalid">
+本番環境への直接デプロイ
+重要データの削除を伴う操作
+セキュリティ設定の変更
+
+</example>

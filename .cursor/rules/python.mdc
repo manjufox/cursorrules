@@ -1,0 +1,23 @@
+---
+description: 
+globs: *.py,*.pyw
+alwaysApply: false
+---
+## Python固有ガイドライン
+- Pydanticモデルでデータ検証を実装
+- 型ヒントを全ての関数に追加
+- asyncio/awaitを活用した非同期処理
+- 環境変数での設定管理
+
+## API設計原則
+- RESTful APIの原則に従う
+- 適切なHTTPステータスコードの使用
+- OpenAPIドキュメントの自動生成
+- バリデーションエラーの詳細なレスポンス
+
+## セキュリティ
+- 入力検証の徹底
+- JWTトークンによる認証
+- CORS設定の適切な管理
+
+- SQLインジェクション対策

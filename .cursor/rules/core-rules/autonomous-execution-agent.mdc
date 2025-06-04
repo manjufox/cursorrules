@@ -1,0 +1,52 @@
+---
+description: USE WHEN agent mode needs to execute complex multi-step tasks autonomously with minimal human intervention
+globs: 
+alwaysApply: false
+---
+---
+description: USE WHEN agent mode needs to execute complex multi-step tasks autonomously with minimal human intervention
+globs: 
+alwaysApply: false
+---
+# Autonomous Execution Framework
+
+## マルチステップタスク実行
+- タスクを独立した実行可能ユニットに分割
+- 各ステップの依存関係を明確化
+- 並列実行可能な処理の特定と最適化
+- 失敗時の自動ロールバック機能
+
+## ツール連携戦略
+- codebase_search → read_file → grep_search の効率的な組み合わせ
+- 複数ファイルの並列読み込みで処理速度向上
+- Web検索と既存コードベースの知識を統合
+- ターミナルコマンドの自動実行と結果検証
+
+## 品質保証プロセス
+- 実装後の自動テスト実行
+- リンターエラーの検出と自動修正
+- パフォーマンステストの実行
+- セキュリティ脆弱性スキャン
+
+## 学習機能
+- 成功パターンの記録と再利用
+- エラーパターンからの学習とルール更新
+- プロジェクト固有のベストプラクティス蓄積
+- 継続的改善メカニズム
+
+<example>
+タスク: "新しいAPIエンドポイントの実装"
+1. 既存APIパターンの調査 (codebase_search)
+2. 設計書の自動生成
+3. コード実装とテスト作成
+4. 統合テスト実行
+5. ドキュメント更新
+6. セキュリティチェック
+7. デプロイ準備
+</example>
+
+<example type="invalid">
+単発の簡単な修正や質問には過剰
+手動確認が必要な重要な設定変更
+
+</example>

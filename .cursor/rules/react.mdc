@@ -1,0 +1,25 @@
+---
+description: 
+globs: *.js,*.ts
+alwaysApply: false
+---
+# React/Next.js Ask Mode実装ルール
+
+## フレームワーク固有ガイドライン
+- App Routerを使用し、Server Componentsを優先する
+- クライアントコンポーネントには'use client'ディレクティブを明記
+- TypeScriptインターフェースでPropsの型定義を必須とする
+- カスタムフックでの状態管理を推奨する
+
+## ファイル構成
+- コンポーネントファイル: PascalCase.tsx
+- フックファイル: use[Name].ts
+- ユーティリティ: utils/[name].ts
+- 型定義: types/[name].ts
+
+## パフォーマンス考慮事項
+- 画像最適化（WebP形式、適切なサイズ指定）
+- 動的インポートによるコード分割
+- メモ化（React.memo、useMemo、useCallback）の適切な使用
+
+- Core Web Vitalsの最適化

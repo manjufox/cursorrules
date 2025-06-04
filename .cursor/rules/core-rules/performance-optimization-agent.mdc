@@ -1,0 +1,43 @@
+---
+description: USE WHEN optimizing code performance, reducing AI hallucinations, or improving execution efficiency
+globs: 
+alwaysApply: false
+---
+---
+description: USE WHEN optimizing code performance, reducing AI hallucinations, or improving execution efficiency
+globs: 
+alwaysApply: false
+---
+# Performance Optimization Framework
+
+## AI幻覚最小化
+- 明確な仕様書とコンテキストの提供
+- 段階的な検証プロセス
+- 既存コードベースとの整合性チェック
+- 実装前の設計確認
+
+## 実行効率最適化
+- 並列処理の積極活用
+- キャッシュ機能の実装
+- 不要な処理の除去
+- メモリ使用量の最適化
+
+## コード品質向上
+- 型チェックの強化
+- 静的解析ツールの活用
+- コードレビューの自動化
+- テストカバレッジの向上
+
+## 継続的監視
+- パフォーマンスベンチマークの実行
+- メトリクス収集と分析
+- ボトルネック特定
+- 改善提案の自動生成
+
+<example>
+- 複数ファイル読み込み時の並列実行
+- 型定義の徹底でランタイムエラー防止
+- キャッシュ機能でAPI呼び出し削減
+- プロファイリングによるボトルネック特定
+
+</example>
