@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manga Server - 軽量Web漫画リーダー</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background-color: #1a1a1a;
+            color: #ffffff;
+            line-height: 1.6;
+        }
+
+        .header {
+            background-color: #2d2d2d;
+            padding: 1rem 2rem;
+            border-bottom: 1px solid #444;
+        }
+
+        .header h1 {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .directory-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-top: 2rem;
+        }
+
+        .directory-card {
+            background-color: #2d2d2d;
+            border-radius: 8px;
+            padding: 1.5rem;
+            border: 1px solid #444;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .directory-card:hover {
+            background-color: #3d3d3d;
+            border-color: #666;
+            transform: translateY(-2px);
+        }
+
+        .directory-title {
+            font-size: 1.1rem;
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+            color: #fff;
+        }
+
+        .directory-info {
+            color: #ccc;
+            font-size: 0.9rem;
+        }
+
+        .thumbnail {
+            width: 100%;
+            height: 200px;
+            background-color: #444;
+            border-radius: 4px;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #888;
+            background-size: cover;
+            background-position: center;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            color: #ccc;
+        }
+
+        .error {
+            background-color: #ff4444;
+            color: white;
+            padding: 1rem;
+            border-radius: 4px;
+            margin: 1rem 0;
+        }
+
+        .breadcrumb {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+            padding: 0.5rem 0;
+            font-size: 0.9rem;
+            color: #ccc;
+        }
+
+        .breadcrumb-item {
+            color: #0066cc;
+            cursor: pointer;
+            text-decoration: none;
+        }
+
+        .breadcrumb-item:hover {
+            text-decoration: underline;
+        }
+
+        .breadcrumb-separator {
+            color: #666;
+        }
+
+        .file-type-archive {
+            border-left: 4px solid #ff6b35;
+        }
+
+        .file-type-directory {
+            border-left: 4px solid #4a90e2;
+        }
+
+        .back-button {
+            background-color: #555;
+            border: none;
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-bottom: 1rem;
+            display: none;
+        }
+
+        .back-button:hover {
+            background-color: #666;
+        }
+
+        /* レスポンシブ対応 */
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem;
+            }
+            
+            .directory-grid {
+                grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+                gap: 1rem;
+            }
+            
+            .header {
+                padding: 1rem;
+            }
+            
+            .header h1 {
+                font-size: 1.2rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .directory-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🎌 Manga Server</h1>
+    </div>
+
+    <div class="container">
+        <div class="breadcrumb" id="breadcrumb" style="display: none;">
+            <!-- パンくずリストがここに表示されます -->
+        </div>
+        
+        <div id="loading" class="loading">
+            📚 漫画ディレクトリを読み込み中...
+        </div>
+        
+        <div id="error" class="error" style="display: none;">
+            ❌ エラーが発生しました。サーバーに接続できません。
+        </div>
+
+        <div id="directoryGrid" class="directory-grid" style="display: none;">
+            <!-- ディレクトリカードがここに動的に追加されます -->
+        </div>
+    </div>
+
+    <script>
+        class MangaServer {
+            constructor() {
+                this.baseUrl = window.location.origin;
+                this.currentPath = '';
+                this.pathHistory = [''];
+                this.init();
+            }
+
+            async init() {
+                try {
+                    // URLからパスを取得
+                    const urlParams = new URLSearchParams(window.location.search);
+                    this.currentPath = urlParams.get('path') || '';
+                    
+                    await this.loadCurrentDirectory();
+                } catch (error) {
+                    this.showError('初期化に失敗しました: ' + error.message);
+                }
+            }
+
+            async loadCurrentDirectory() {
+                try {
+                    let response;
+                    if (this.currentPath === '') {
+                        // ルートディレクトリの場合
+                        response = await fetch(`${this.baseUrl}/api/v1/directories`);
+                    } else {
+                        // サブディレクトリの場合
+                        response = await fetch(`${this.baseUrl}/api/v1/files/${encodeURIComponent(this.currentPath)}`);
+                    }
+                    
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    
+                    const data = await response.json();
+                    const items = data.directories || data.files || [];
+                    
+                    this.renderItems(items);
+                    this.updateBreadcrumb();
+                    
+                    document.getElementById('loading').style.display = 'none';
+                    document.getElementById('directoryGrid').style.display = 'grid';
+                } catch (error) {
+                    console.error('Directory loading failed:', error);
+                    this.showError('ディレクトリの読み込みに失敗しました: ' + error.message);
+                }
+            }
+
+            renderItems(items) {
+                const grid = document.getElementById('directoryGrid');
+                grid.innerHTML = '';
+
+                items.forEach(item => {
+                    const card = this.createItemCard(item);
+                    if (card) {
+                        grid.appendChild(card);
+                    }
+                });
+            }
+
+            createItemCard(item) {
+                const card = document.createElement('div');
+                card.className = 'directory-card';
+                
+                // ファイル種別に応じてスタイル追加
+                if (item.is_dir) {
+                    card.classList.add('file-type-directory');
+                    card.onclick = () => this.openDirectory(item.path);
+                } else if (this.isArchiveFile(item.extension)) {
+                    card.classList.add('file-type-archive');
+                    card.onclick = () => this.openViewer(item.path);
+                } else {
+                    // その他のファイルは無視（またはエラー表示）
+                    return null;
+                }
+
+                const thumbnail = document.createElement('div');
+                thumbnail.className = 'thumbnail';
+                
+                if (item.is_dir) {
+                    thumbnail.textContent = '📁';
+                    // ディレクトリのサムネイル画像を非同期で読み込み
+                    this.loadThumbnail(item.path, thumbnail);
+                } else if (this.isArchiveFile(item.extension)) {
+                    thumbnail.textContent = '📦';
+                    // アーカイブファイルのサムネイル画像を非同期で読み込み
+                    this.loadThumbnail(item.path, thumbnail);
+                }
+
+                const title = document.createElement('div');
+                title.className = 'directory-title';
+                title.textContent = item.name;
+
+                const info = document.createElement('div');
+                info.className = 'directory-info';
+                if (item.is_dir) {
+                    info.textContent = `📁 ディレクトリ`;
+                } else {
+                    info.textContent = `📦 ${item.extension.toUpperCase()} アーカイブ`;
+                }
+
+                card.appendChild(thumbnail);
+                card.appendChild(title);
+                card.appendChild(info);
+
+                return card;
+            }
+
+            async loadThumbnail(path, thumbnailElement) {
+                try {
+                    let fullPath = this.currentPath ? `${this.currentPath}/${path}` : path;
+                    const encodedPath = encodeURIComponent(fullPath);
+                    const response = await fetch(`${this.baseUrl}/api/v1/thumbnail/${encodedPath}`);
+                    
+                    if (response.ok) {
+                        const blob = await response.blob();
+                        const imageUrl = URL.createObjectURL(blob);
+                        thumbnailElement.style.backgroundImage = `url(${imageUrl})`;
+                        thumbnailElement.textContent = '';
+                    }
+                } catch (error) {
+                    console.log('Thumbnail load failed for:', path);
+                    // エラーの場合はデフォルトアイコンのまま
+                }
+            }
+
+            async openDirectory(path) {
+                // まず、ディレクトリ内に画像ファイルがあるかチェック
+                const newPath = this.currentPath ? `${this.currentPath}/${path}` : path;
+                
+                try {
+                    const response = await fetch(`${this.baseUrl}/api/v1/files/${encodeURIComponent(newPath)}`);
+                    if (!response.ok) {
+                        throw new Error('ディレクトリにアクセスできません');
+                    }
+                    
+                    const data = await response.json();
+                    const hasImages = data.files.some(file => 
+                        !file.is_dir && this.isImageFile(file.extension)
+                    );
+                    
+                    if (hasImages) {
+                        // 画像ファイルがある場合はビューアを開く
+                        this.openViewer(newPath);
+                    } else {
+                        // 画像ファイルがない場合はディレクトリ内に移動
+                        this.navigateToDirectory(newPath);
+                    }
+                } catch (error) {
+                    console.error('Directory check failed:', error);
+                    this.showError('ディレクトリの確認に失敗しました: ' + error.message);
+                }
+            }
+
+            navigateToDirectory(path) {
+                const newUrl = `${window.location.pathname}?path=${encodeURIComponent(path)}`;
+                window.history.pushState({path: path}, '', newUrl);
+                this.currentPath = path;
+                this.loadCurrentDirectory();
+            }
+
+            openViewer(path) {
+                // ビューアページに遷移
+                const fullPath = this.currentPath ? `${this.currentPath}/${path}` : path;
+                window.location.href = `/viewer/${encodeURIComponent(fullPath)}`;
+            }
+
+            isImageFile(ext) {
+                const imageExts = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
+                return imageExts.includes(ext.toLowerCase());
+            }
+
+            isArchiveFile(ext) {
+                const archiveExts = ['.zip', '.rar', '.cbz', '.cbr'];
+                return archiveExts.includes(ext.toLowerCase());
+            }
+
+            updateBreadcrumb() {
+                const breadcrumb = document.getElementById('breadcrumb');
+                const pathParts = this.currentPath ? this.currentPath.split('/') : [];
+                
+                breadcrumb.innerHTML = '';
+                breadcrumb.style.display = 'flex';
+                
+                // ホームリンク
+                const homeLink = document.createElement('span');
+                homeLink.className = 'breadcrumb-item';
+                homeLink.textContent = '🏠 ホーム';
+                homeLink.onclick = () => this.navigateToDirectory('');
+                breadcrumb.appendChild(homeLink);
+                
+                // パスの各部分
+                let currentPath = '';
+                pathParts.forEach((part, index) => {
+                    if (part) {
+                        const separator = document.createElement('span');
+                        separator.className = 'breadcrumb-separator';
+                        separator.textContent = ' > ';
+                        breadcrumb.appendChild(separator);
+                        
+                        currentPath = currentPath ? `${currentPath}/${part}` : part;
+                        
+                        const pathLink = document.createElement('span');
+                        pathLink.className = 'breadcrumb-item';
+                        pathLink.textContent = part;
+                        const linkPath = currentPath;
+                        pathLink.onclick = () => this.navigateToDirectory(linkPath);
+                        breadcrumb.appendChild(pathLink);
+                    }
+                });
+            }
+
+            showError(message) {
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('error').style.display = 'block';
+                document.getElementById('error').textContent = '❌ ' + message;
+            }
+        }
+
+        // アプリケーション初期化
+        document.addEventListener('DOMContentLoaded', () => {
+            const app = new MangaServer();
+            
+            // ブラウザの戻る/進むボタン対応
+            window.addEventListener('popstate', (event) => {
+                const path = event.state?.path || '';
+                app.currentPath = path;
+                app.loadCurrentDirectory();
+            });
+        });
+
+        // キーボードナビゲーション（基本）
+        document.addEventListener('keydown', (e) => {
+            switch(e.key) {
+                case 'Escape':
+                case 'q':
+                    // トップページでは何もしない（将来的に設定画面等）
+                    break;
+                case 'r':
+                    // ページリロード
+                    location.reload();
+                    break;
+            }
+        });
+    </script>
+</body>
+</html> 

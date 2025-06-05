@@ -1,0 +1,25 @@
+# Manga Server Configuration
+server:
+  host: "0.0.0.0"
+  port: "8080"
+
+manga:
+  source_path: "S:/comic"
+
+cache:
+  max_size: 500
+  ttl_minutes: 60
+  cleanup_interval_minutes: 10
+
+prefetch:
+  count: 100
+  enabled: true
+
+performance:
+  image_quality: 85
+  max_image_width: 1920
+  max_image_height: 1080
+
+logging:
+  level: "info"
+  enable_access_log: true 

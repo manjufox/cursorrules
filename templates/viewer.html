@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{.Title}} - Manga Viewer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background-color: #000;
+            color: #fff;
+            overflow: hidden;
+        }
+
+        .viewer-container {
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .toolbar {
+            background-color: rgba(45, 45, 45, 0.9);
+            padding: 0.5rem 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            transition: opacity 0.3s ease;
+        }
+
+        .toolbar.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .toolbar-left {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .toolbar-right {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .btn {
+            background-color: #444;
+            border: none;
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: background-color 0.2s;
+        }
+
+        .btn:hover {
+            background-color: #555;
+        }
+
+        .btn.active {
+            background-color: #0066cc;
+        }
+
+        .page-info {
+            color: #ccc;
+            font-size: 0.9rem;
+        }
+
+        .content-area {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding-top: 60px; /* toolbarの高さ分 */
+            position: relative;
+        }
+
+        .image-container {
+            max-width: 100%;
+            max-height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+        }
+
+        .manga-image {
+            max-width: 100%;
+            max-height: 90vh;
+            object-fit: contain;
+            cursor: pointer;
+            transition: transform 0.3s ease;
+        }
+
+        .manga-image.fit-width {
+            width: 100%;
+            height: auto;
+        }
+
+        .manga-image.fit-height {
+            height: 90vh;
+            width: auto;
+        }
+
+        .manga-image.double-page {
+            max-width: 100%;
+        }
+
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #ccc;
+            font-size: 1.2rem;
+        }
+
+        .error {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: #ff4444;
+            color: white;
+            padding: 1rem 2rem;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .navigation-hint {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: rgba(0, 0, 0, 0.8);
+            color: #ccc;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            z-index: 1000;
+            transition: opacity 0.3s ease;
+        }
+
+        .navigation-hint.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        /* プリフェッチ状況表示 */
+        .prefetch-status {
+            position: fixed;
+            top: 70px;
+            right: 20px;
+            background-color: rgba(0, 0, 0, 0.8);
+            color: #ccc;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            z-index: 1000;
+            min-width: 200px;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 4px;
+            background-color: #333;
+            border-radius: 2px;
+            margin-top: 0.5rem;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background-color: #0066cc;
+            transition: width 0.3s ease;
+            width: 0%;
+        }
+
+        /* モバイル対応 */
+        @media (max-width: 768px) {
+            .toolbar {
+                padding: 0.3rem 0.5rem;
+            }
+            
+            .btn {
+                padding: 0.3rem 0.6rem;
+                font-size: 0.8rem;
+            }
+            
+            .content-area {
+                padding-top: 50px;
+            }
+            
+            .manga-image {
+                max-height: 85vh;
+            }
+        }
+
+        /* 縦スクロールモード */
+        .vertical-scroll {
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+
+        .vertical-scroll .content-area {
+            flex-direction: column;
+            align-items: center;
+            height: auto;
+            min-height: 100vh;
+            padding: 80px 20px 20px;
+        }
+
+        .vertical-scroll .manga-image {
+            width: 100%;
+            height: auto;
+            max-height: none;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="viewer-container" id="viewerContainer">
+        <div class="toolbar" id="toolbar">
+            <div class="toolbar-left">
+                <button class="btn" onclick="goBack()">← 戻る</button>
+                <button class="btn" onclick="toggleViewMode()" id="viewModeBtn">シングル</button>
+                <button class="btn" onclick="toggleFitMode()" id="fitModeBtn">画面フィット</button>
+            </div>
+            <div class="toolbar-right">
+                <span class="page-info" id="pageInfo">-/-</span>
+                <button class="btn" onclick="toggleFullscreen()">全画面</button>
+            </div>
+        </div>
+
+        <div class="content-area" id="contentArea">
+            <div class="loading" id="loading">📖 読み込み中...</div>
+            <div class="error" id="error" style="display: none;">
+                ❌ エラーが発生しました
+            </div>
+            <div class="image-container" id="imageContainer" style="display: none;">
+                <img class="manga-image" id="mangaImage" alt="漫画ページ">
+            </div>
+        </div>
+
+        <div class="navigation-hint" id="navigationHint">
+            ← → : ページ送り | Space : 次ページ | Esc : 戻る | F : 全画面
+        </div>
+
+        <div class="prefetch-status" id="prefetchStatus" style="display: none;">
+            <div id="prefetchText">プリフェッチ中...</div>
+            <div class="progress-bar">
+                <div class="progress-fill" id="prefetchProgressFill"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class MangaViewer {
+            constructor() {
+                this.baseUrl = window.location.origin;
+                this.currentPath = decodeURIComponent(window.location.pathname.split('/viewer/')[1] || '');
+                this.files = [];
+                this.currentIndex = 0;
+                this.viewMode = 'single'; // single, double, vertical
+                this.fitMode = 'contain'; // contain, width, height
+                this.isFullscreen = false;
+                this.toolbarVisible = true;
+                this.isArchive = false; // アーカイブファイルかどうか
+                this.prefetchStarted = false; // プリフェッチ重複防止フラグ
+                
+                this.init();
+                this.setupEventListeners();
+            }
+
+            async init() {
+                try {
+                    await this.loadFiles();
+                    if (this.files.length > 0) {
+                        this.showImage();
+                    } else {
+                        this.showError('このディレクトリには画像ファイルがありません');
+                    }
+                } catch (error) {
+                    this.showError('ファイルの読み込みに失敗しました: ' + error.message);
+                }
+            }
+
+            async loadFiles() {
+                // アーカイブファイルかどうかチェック
+                const pathExt = this.currentPath.toLowerCase();
+                this.isArchive = pathExt.endsWith('.cbz') || pathExt.endsWith('.cbr') || 
+                                pathExt.endsWith('.zip') || pathExt.endsWith('.rar');
+                
+                let response;
+                if (this.isArchive) {
+                    // アーカイブファイルの場合
+                    response = await fetch(`${this.baseUrl}/api/v1/archive/${encodeURIComponent(this.currentPath)}`);
+                } else {
+                    // ディレクトリの場合
+                    response = await fetch(`${this.baseUrl}/api/v1/files/${encodeURIComponent(this.currentPath)}`);
+                }
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                const sourceFiles = data.files || [];
+                
+                // 画像ファイルのみフィルタリング
+                this.files = sourceFiles.filter(file => 
+                    !file.is_dir && this.isImageFile(file.extension)
+                ).sort((a, b) => a.name.localeCompare(b.name));
+                
+                console.log(`Loaded ${this.files.length} image files from ${this.isArchive ? 'archive' : 'directory'}: ${this.currentPath}`);
+            }
+
+            isImageFile(ext) {
+                const imageExts = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
+                return imageExts.includes(ext.toLowerCase());
+            }
+
+            showImage() {
+                if (this.files.length === 0) return;
+
+                const file = this.files[this.currentIndex];
+                let imageUrl;
+                
+                if (this.isArchive) {
+                    // アーカイブファイル内の画像の場合、特別なAPIエンドポイントを使用
+                    // 注意: これは今後実装予定の機能
+                    imageUrl = `${this.baseUrl}/api/v1/archive-image/${encodeURIComponent(this.currentPath)}/${encodeURIComponent(file.name)}`;
+                } else {
+                    // ディレクトリ内の画像の場合
+                    const imagePath = `${this.currentPath}/${file.name}`;
+                    imageUrl = `${this.baseUrl}/api/v1/image/${encodeURIComponent(imagePath)}`;
+                }
+                
+                console.log(`Loading image: ${imageUrl}`);
+                
+                const img = document.getElementById('mangaImage');
+                const loading = document.getElementById('loading');
+                const container = document.getElementById('imageContainer');
+                
+                loading.style.display = 'block';
+                container.style.display = 'none';
+                
+                img.onload = () => {
+                    loading.style.display = 'none';
+                    container.style.display = 'flex';
+                    this.updatePageInfo();
+                    this.applyViewMode();
+                    
+                    // プリフェッチを開始（アーカイブファイルの場合のみ）
+                    if (this.isArchive) {
+                        this.prefetchNextImages();
+                    }
+                };
+                
+                img.onerror = () => {
+                    console.error(`Failed to load image: ${imageUrl}`);
+                    this.showError('画像の読み込みに失敗しました');
+                };
+                
+                img.src = imageUrl;
+            }
+
+            updatePageInfo() {
+                const pageInfo = document.getElementById('pageInfo');
+                pageInfo.textContent = `${this.currentIndex + 1}/${this.files.length}`;
+            }
+
+            nextPage() {
+                if (this.currentIndex < this.files.length - 1) {
+                    this.currentIndex++;
+                    this.showImage();
+                }
+            }
+
+            prevPage() {
+                if (this.currentIndex > 0) {
+                    this.currentIndex--;
+                    this.showImage();
+                }
+            }
+
+            firstPage() {
+                this.currentIndex = 0;
+                this.showImage();
+            }
+
+            lastPage() {
+                this.currentIndex = this.files.length - 1;
+                this.showImage();
+            }
+
+            toggleViewMode() {
+                const modes = ['single', 'double', 'vertical'];
+                const currentIndex = modes.indexOf(this.viewMode);
+                this.viewMode = modes[(currentIndex + 1) % modes.length];
+                
+                const btn = document.getElementById('viewModeBtn');
+                const modeNames = { single: 'シングル', double: '見開き', vertical: '縦スクロール' };
+                btn.textContent = modeNames[this.viewMode];
+                
+                this.applyViewMode();
+            }
+
+            toggleFitMode() {
+                const modes = ['contain', 'width', 'height'];
+                const currentIndex = modes.indexOf(this.fitMode);
+                this.fitMode = modes[(currentIndex + 1) % modes.length];
+                
+                const btn = document.getElementById('fitModeBtn');
+                const modeNames = { contain: '画面フィット', width: '幅フィット', height: '高さフィット' };
+                btn.textContent = modeNames[this.fitMode];
+                
+                this.applyViewMode();
+            }
+
+            applyViewMode() {
+                const container = document.getElementById('viewerContainer');
+                const img = document.getElementById('mangaImage');
+                
+                // クラスをリセット
+                container.className = 'viewer-container';
+                img.className = 'manga-image';
+                
+                // ビューモードを適用
+                if (this.viewMode === 'vertical') {
+                    container.classList.add('vertical-scroll');
+                } else if (this.viewMode === 'double') {
+                    img.classList.add('double-page');
+                }
+                
+                // フィットモードを適用
+                if (this.fitMode === 'width') {
+                    img.classList.add('fit-width');
+                } else if (this.fitMode === 'height') {
+                    img.classList.add('fit-height');
+                }
+            }
+
+            toggleFullscreen() {
+                if (!this.isFullscreen) {
+                    document.documentElement.requestFullscreen();
+                } else {
+                    document.exitFullscreen();
+                }
+            }
+
+            toggleToolbar() {
+                this.toolbarVisible = !this.toolbarVisible;
+                const toolbar = document.getElementById('toolbar');
+                const hint = document.getElementById('navigationHint');
+                
+                if (this.toolbarVisible) {
+                    toolbar.classList.remove('hidden');
+                    hint.classList.remove('hidden');
+                } else {
+                    toolbar.classList.add('hidden');
+                    hint.classList.add('hidden');
+                }
+            }
+
+            goBack() {
+                window.location.href = '/';
+            }
+
+            showError(message) {
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('imageContainer').style.display = 'none';
+                const error = document.getElementById('error');
+                error.style.display = 'block';
+                error.textContent = '❌ ' + message;
+            }
+
+            prefetchNextImages() {
+                if (!this.isArchive || this.files.length === 0 || this.prefetchStarted) return;
+                
+                // プリフェッチ開始フラグを設定
+                this.prefetchStarted = true;
+                
+                const currentFile = this.files[this.currentIndex];
+                const prefetchPath = `${this.currentPath}/${currentFile.name}`;
+                
+                console.log('Starting prefetch for:', prefetchPath);
+                
+                // プリフェッチAPIを非同期で呼び出し
+                fetch(`${this.baseUrl}/api/v1/prefetch/${encodeURIComponent(prefetchPath)}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        console.log('Prefetch started:', data);
+                        // プリフェッチ状況の監視を開始
+                        this.monitorPrefetchProgress();
+                    })
+                    .catch(error => {
+                        console.warn('Prefetch failed:', error);
+                        // エラーの場合はフラグをリセット
+                        this.prefetchStarted = false;
+                    });
+            }
+
+            monitorPrefetchProgress() {
+                const statusElement = document.getElementById('prefetchStatus');
+                const textElement = document.getElementById('prefetchText');
+                const progressElement = document.getElementById('prefetchProgressFill');
+                
+                statusElement.style.display = 'block';
+                
+                const checkProgress = () => {
+                    fetch(`${this.baseUrl}/api/v1/prefetch-status/${encodeURIComponent(this.currentPath)}`)
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.error) {
+                                // エラーまたは状況が見つからない場合
+                                statusElement.style.display = 'none';
+                                return;
+                            }
+                            
+                            const progress = Math.round(data.progress_percent);
+                            textElement.textContent = `プリフェッチ中... ${data.prefetched}/${data.total_images} (${progress}%)`;
+                            progressElement.style.width = `${progress}%`;
+                            
+                            if (!data.in_progress) {
+                                // プリフェッチ完了
+                                textElement.textContent = `プリフェッチ完了! ${data.prefetched}/${data.total_images}`;
+                                setTimeout(() => {
+                                    statusElement.style.display = 'none';
+                                }, 3000); // 3秒後に非表示
+                                // プリフェッチ完了時にフラグをリセット
+                                this.prefetchStarted = false;
+                            } else {
+                                // まだ進行中の場合、1秒後に再チェック
+                                setTimeout(checkProgress, 1000);
+                            }
+                        })
+                        .catch(error => {
+                            console.warn('Failed to check prefetch status:', error);
+                            statusElement.style.display = 'none';
+                        });
+                };
+                
+                // 初回チェック
+                setTimeout(checkProgress, 500);
+            }
+
+            setupEventListeners() {
+                // キーボードナビゲーション
+                document.addEventListener('keydown', (e) => {
+                    switch(e.key) {
+                        case 'ArrowRight':
+                        case ' ':
+                        case 'j':
+                        case 'n':
+                        case 'PageDown':
+                            e.preventDefault();
+                            this.nextPage();
+                            break;
+                        case 'ArrowLeft':
+                        case 'Backspace':
+                        case 'k':
+                        case 'p':
+                        case 'PageUp':
+                            e.preventDefault();
+                            this.prevPage();
+                            break;
+                        case 'Home':
+                        case 'g':
+                            e.preventDefault();
+                            this.firstPage();
+                            break;
+                        case 'End':
+                        case 'G':
+                            e.preventDefault();
+                            this.lastPage();
+                            break;
+                        case 'Escape':
+                        case 'q':
+                            this.goBack();
+                            break;
+                        case 'f':
+                        case 'F11':
+                            e.preventDefault();
+                            this.toggleFullscreen();
+                            break;
+                        case '1':
+                            this.viewMode = 'single';
+                            this.applyViewMode();
+                            break;
+                        case '2':
+                            this.viewMode = 'double';
+                            this.applyViewMode();
+                            break;
+                        case 'v':
+                            this.viewMode = 'vertical';
+                            this.applyViewMode();
+                            break;
+                        case 'w':
+                            this.fitMode = 'width';
+                            this.applyViewMode();
+                            break;
+                        case 'h':
+                            this.fitMode = 'height';
+                            this.applyViewMode();
+                            break;
+                        case 'z':
+                            this.fitMode = 'contain';
+                            this.applyViewMode();
+                            break;
+                        case 't':
+                            this.toggleToolbar();
+                            break;
+                    }
+                });
+
+                // クリックナビゲーション
+                document.getElementById('mangaImage').addEventListener('click', (e) => {
+                    const rect = e.target.getBoundingClientRect();
+                    const x = e.clientX - rect.left;
+                    const width = rect.width;
+                    
+                    if (x < width / 2) {
+                        this.prevPage();
+                    } else {
+                        this.nextPage();
+                    }
+                });
+
+                // フルスクリーン変更イベント
+                document.addEventListener('fullscreenchange', () => {
+                    this.isFullscreen = !!document.fullscreenElement;
+                });
+
+                // ナビゲーションヒントの自動非表示
+                setTimeout(() => {
+                    document.getElementById('navigationHint').classList.add('hidden');
+                }, 3000);
+            }
+        }
+
+        // アプリケーション初期化
+        document.addEventListener('DOMContentLoaded', () => {
+            new MangaViewer();
+        });
+    </script>
+</body>
+</html> 

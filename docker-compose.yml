@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  manga-server:
+    build: .
+    ports:
+      - "8080:8080"
+    volumes:
+      - "S:/comic/saimin:/manga:ro"
+    environment:
+      - MANGA_PATH=/manga
+      - PORT=8080
+      - GIN_MODE=debug
+    restart: unless-stopped
+    
+  # 開発用: ホットリロード対応
+  manga-dev:
+    build: .
+    ports:
+      - "8081:8080"
+    volumes:
+      - "S:/comic/saimin:/manga:ro"
+      - ".:/app"
+    environment:
+      - MANGA_PATH=/manga
+      - PORT=8080
+      - GIN_MODE=debug
+    command: ["go", "run", "main.go"]
+    working_dir: /app
+    profiles:
+      - dev 

@@ -38,6 +38,7 @@
 ## 🏗️ Gin実装アーキテクチャ
 
 ### API設計
+
 ```go
 // メインルーティング
 r := gin.Default()
@@ -61,6 +62,7 @@ r.GET("/viewer/*path", viewerPage)              // ビューアページ
 ```
 
 ### ミドルウェア構成
+
 ```go
 r.Use(gin.Logger())                    // アクセスログ
 r.Use(gin.Recovery())                  // パニック復旧
@@ -207,7 +209,7 @@ services:
 
 ### Phase 1: コア機能（最優先）
 
-- [X] ファイル読み込み・解析（Priority 1）
+- [ ] ファイル読み込み・解析（Priority 1）
 - [ ] 基本的な画像処理（Priority 2）
 - [ ] 簡易HTML生成（Priority 3）
 - [ ] 基本的なHTTPサーバー（Priority 4）
