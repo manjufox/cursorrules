@@ -1,0 +1,226 @@
+# Go製軽量Web漫画サイト 仕様確認Q&A
+
+metadata:
+  version: "1.0"
+  created_date: "2025-01-27"
+  purpose: "仕様相互確認のためのQ&Aデータ"
+  format: "YAML"
+
+# 基本仕様に関する質問
+basic_specs:
+  - id: "Q001"
+    category: "ディレクトリ構造"
+    question: "NAS上の漫画ディレクトリ構造は以下の想定で問題ないでしょうか？"
+    proposed_structure: |
+      /manga-library/
+      ├── 作品名1/
+      │   ├── 第01巻/
+      │   │   ├── 001.jpg
+      │   │   ├── 002.jpg
+      │   │   └── ...
+      │   ├── 第02巻/
+      │   └── ...
+      ├── 作品名2/
+      └── ...
+    options:
+      - "提案通りで問題なし"
+      - "別の構造を希望（詳細を記載）"
+      - "柔軟に対応できるようにしたい"
+    answer: "zip,rar,cbr,cbz,jpg,png,gif,webpが非構造化ファイルとして存在しますので柔軟に対応できるようにしたい"
+    notes: ""
+
+  - id: "Q002"
+    category: "画像形式・品質"
+    question: "画像の最適化設定は以下で適切でしょうか？"
+    proposed_settings:
+      primary_format: "WebP"
+      fallback_format: "JPEG"
+      sizes: [320, 768, 1024, 1920]
+      quality_levels:
+        high_speed: 85
+        medium_speed: 75
+        low_speed: 65
+    options:
+      - "提案通りで問題なし"
+      - "品質レベルを調整したい"
+      - "サイズ設定を変更したい"
+      - "別の形式を優先したい"
+    answer: "もっとシンプルでいい．"
+    notes: ""
+
+  - id: "Q003"
+    category: "認証・セキュリティ"
+    question: "セキュリティレベルは以下で十分でしょうか？"
+    proposed_security:
+      authentication: "基本認証（ユーザー名・パスワード）"
+      ip_restriction: "VPN接続元IP制限"
+      encryption: "HTTPS（TLS 1.3）"
+      additional: "CSP設定、パストラバーサル対策"
+    options:
+      - "基本認証で十分"
+      - "より強固な認証が必要"
+      - "IP制限は不要"
+      - "追加のセキュリティ機能が必要"
+    answer: ""
+    notes: ""
+
+# 技術仕様に関する質問
+technical_specs:
+  - id: "Q004"
+    category: "処理方式"
+    question: "画像処理・配信方式はどちらを優先しますか？"
+    options:
+      - name: "静的ファイル生成"
+        description: "事前に全画像を最適化・生成して配信"
+        pros: ["高速配信", "サーバー負荷軽減", "キャッシュ効率良"]
+        cons: ["初期処理時間", "ディスク容量増加"]
+      - name: "リアルタイム処理"
+        description: "リクエスト時に画像を動的に最適化"
+        pros: ["ディスク容量節約", "柔軟な設定変更"]
+        cons: ["処理時間", "サーバー負荷"]
+      - name: "ハイブリッド"
+        description: "よく使われる画像は事前生成、その他は動的処理"
+        pros: ["バランス良好"]
+        cons: ["実装複雑"]
+    answer: ""
+    notes: ""
+
+  - id: "Q005"
+    category: "キャッシュ戦略"
+    question: "キャッシュ設定はどの程度積極的にしますか？"
+    proposed_cache:
+      browser_cache: "24時間"
+      etag_enabled: true
+      compression: "gzip + brotli"
+      cdn_ready: true
+    options:
+      - "積極的キャッシュ（長期間）"
+      - "適度なキャッシュ（提案通り）"
+      - "控えめなキャッシュ（短期間）"
+      - "カスタム設定"
+    answer: ""
+    notes: ""
+
+# 機能優先度に関する質問
+feature_priority:
+  - id: "Q006"
+    category: "Phase 1 優先機能"
+    question: "Phase 1（基本機能）で最も重要視する機能は何ですか？"
+    features:
+      - name: "ファイル読み込み・解析"
+        priority: "1"
+        notes: ""
+      - name: "基本的な画像処理"
+        priority: "2"
+        notes: ""
+      - name: "簡易HTML生成"
+        priority: "3"
+        notes: ""
+      - name: "基本的なHTTPサーバー"
+        priority: "4"
+        notes: ""
+    priority_scale: "1-4 (1=最重要, 4=後回し可)"
+    answer: "ファイルはディレクトリごとにサムネイル表示をする．ディレクトリを行き来できるようにする．"
+    notes: ""
+
+  - id: "Q007"
+    category: "ユーザビリティ機能"
+    question: "以下のUX機能の優先度を教えてください"
+    features:
+      - name: "キーボードナビゲーション"
+        description: "矢印キー、スペースキーでページ送り"
+        priority: "1"
+      - name: "ブックマーク機能"
+        description: "LocalStorageでの読書進捗保存"
+        priority: "2"
+      - name: "検索機能"
+        description: "作品名・作者名での高速検索"
+        priority: "3"
+      - name: "レスポンシブ対応"
+        description: "スマホ・タブレット・PC対応"
+        priority: "1"
+    priority_scale: "1-4 (1=最重要, 4=後回し可)"
+    answer: "キーボードナビゲーションはカスタマイズ可能とする．基本機能：
+    ・ページ送り（右矢印、スペース、J、N、PageDown）
+    ・ページ戻し（左矢印、Backspace、K、P、PageUp）
+    ・最初のページ（Home、Ctrl+Home、G）
+    ・最後のページ（End、Ctrl+End、Shift+G）
+    ・次のファイル/チャプター（Ctrl+右矢印、Ctrl+N）
+    ・前のファイル/チャプター（Ctrl+左矢印、Ctrl+P）
+    ・ファイル一覧表示（Escape、Q）
+    ・全画面表示切替（F、F11）
+    ・拡大/縮小（+/-、Ctrl+マウスホイール）
+    ・フィット切替（W：幅合わせ、H：高さ合わせ、Z：実寸大）
+    ・表示モード切替（1：1ページ、2：見開き、V：縦スクロール）
+    ・ブックマーク（B：追加、Ctrl+B：一覧）
+    ・検索（Ctrl+F、/）
+    ・設定画面（S、Ctrl+,）
+    ・ページジャンプ（G+数字、Ctrl+G）
+    ・自動再生（A：開始/停止、+/-：速度調整）"
+    notes: ""
+
+# 運用・環境に関する質問
+operational_specs:
+  - id: "Q008"
+    category: "デプロイ環境"
+    question: "想定している運用環境を教えてください"
+    options:
+      - "NAS上で直接実行"
+      - "別サーバーでNASをマウント"
+      - "Docker環境"
+      - "クラウド環境"
+      - "その他"
+    answer: "Docker環境でボリュームをマウントする"
+    notes: ""
+
+  - id: "Q009"
+    category: "パフォーマンス要件"
+    question: "以下のパフォーマンス目標は適切ですか？"
+    proposed_targets:
+      initial_load: "3秒以内"
+      page_turn: "1秒以内"
+      image_size: "平均200KB以下（高品質時）"
+      memory_usage: "512MB以下"
+      cpu_usage: "平常時10%以下"
+    options:
+      - "目標通りで問題なし"
+      - "より厳しい目標が必要"
+      - "より緩い目標で十分"
+      - "カスタム目標"
+    answer: "ページの読み込みは1秒以内，ページの切り替えは0.5秒以内"
+    notes: ""
+
+  - id: "Q010"
+    category: "追加要件"
+    question: "その他、重要な要件や制約はありますか？"
+    categories:
+      - name: "技術的制約"
+        answer: "クライアント側の負荷はできるだけ低くしたい．その分サーバー側に負荷をかけていい"
+      - name: "運用上の制約"
+        answer: "コア部分だけ先に実装して．他の機能は後で追加できるようにする"
+      - name: "セキュリティ要件"
+        answer: "セキュリティは後回しにする．無くても良い"
+      - name: "パフォーマンス要件"
+        answer: "ページの読み込みは1秒以内，ページの切り替えは0.5秒以内"
+      - name: "その他"
+        answer: "どんなディレクトリ構造でも対応できるようにする"
+
+# 回答記入用テンプレート
+answer_template:
+  instructions: |
+    各質問に対して、以下の形式で回答してください：
+    1. answer フィールドに選択肢または具体的な回答を記入
+    2. notes フィールドに補足説明や詳細要件を記入
+    3. 優先度が求められている場合は、指定されたスケールで記入
+  
+  example:
+    question_id: "Q001"
+    answer: "提案通りで問題なし"
+    notes: "ただし、作者名でのフォルダ分類も対応してほしい"
+
+# 次のステップ
+next_steps:
+  - "Q&Aファイルに回答を記入"
+  - "仕様書の更新・調整"
+  - "実装計画の詳細化"
+  - "Phase 1の開発開始" 
